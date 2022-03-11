@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -30,9 +31,8 @@ func NewPostgresDB(cfg Config) (*sql.DB, error) {
 	}
 
 	err = db.Ping()
-	if err != nil {
+	if err != nil{
 		return nil, err
 	}
-
 	return db, nil
 }

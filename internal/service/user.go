@@ -24,7 +24,12 @@ func (s *UserService) Create(user *entity.User) (uint64, error) {
 	if err == nil {
 		s.repo.User.FlushCachedUsers()
 	}
+	err = s.repo.LogUser(user)
+	if err != nil {
+		return 0, err
+	}
 	return userId, err
+
 }
 
 func (s *UserService) GetAll() ([]entity.User, error) {

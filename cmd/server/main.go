@@ -1,6 +1,7 @@
 package main
 
 import (
+	//"crypto/tls"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"grpc/internal/repository"
@@ -12,6 +13,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+	"github.com/ClickHouse/clickhouse-go/v2"
 )
 
 func main() {
@@ -22,6 +25,29 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found")
 	}
+	clickDB := clickhouse.OpenDB(&clickhouse.Options{
+		Addr: []string{
+			os.Getenv("CLICKHOUSE_HOST") +
+				":" +
+				os.Getenv("CLICKHOUSE_PORT"),
+		},
+		Auth: clickhouse.Auth{
+			Database: "default",
+			Username: "default",
+			Password: "",
+		},
+		Settings: clickhouse.Settings{
+			"max_execution_time": 60,
+		},
+		DialTimeout: 5 * time.Second,
+		Compression: &clickhouse.Compression{
+			Method: clickhouse.CompressionLZ4,
+		},
+		Debug: true,
+	})
+	clickDB.SetMaxIdleConns(5)
+	clickDB.SetMaxOpenConns(10)
+	clickDB.SetConnMaxLifetime(time.Hour)
 
 	db, err := repository.NewPostgresDB(repository.Config{
 		Host:     os.Getenv("POSTGRES_HOST"),
@@ -45,7 +71,7 @@ func main() {
 		log.Fatal("Connect to rdb err: ", err)
 	}
 
-	repos := repository.NewRepository(db, rdb)
+	repos := repository.NewRepository(db, rdb,clickDB)
 	services := service.NewService(repos)
 
 	deps := transport.Deps{
